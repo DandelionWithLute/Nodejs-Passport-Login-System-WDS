@@ -11,6 +11,7 @@ const session = require("express-session");
 const methodOverride = require("method-override");
 
 const initializePassport = require("./passport-config");
+const { name } = require("ejs");
 initializePassport(
   passport,
   (email) => users.find((user) => user.email === email),
@@ -19,7 +20,7 @@ initializePassport(
 
 const users = [];
 
-app.set("view engine", "ejs");
+app.set("view-engine", "ejs");
 app.use(express.urlencoded({ extended: false }));
 app.use(flash());
 app.use(
@@ -37,7 +38,7 @@ app.get("/", checkAuthenticated, (req, res) => {
   res.render("index.ejs", { name: req.user.name });
 });
 
-app.get("/login", checkAuthenticated, (req, res) => {
+app.get("/login", checkNotAuthenticated, (req, res) => {
   res.render("login.ejs");
 });
 
@@ -51,9 +52,11 @@ app.post(
   })
 );
 
-app.get("/register", checkAuthenticated, (req, res) => {
+app.get("/register", checkNotAuthenticated, (req, res) => {
   res.render("register.ejs");
 });
+
+// var dbid, dbname, dbemail, dbpassword;
 
 app.post("/register", checkNotAuthenticated, async (req, res) => {
   try {
@@ -64,6 +67,10 @@ app.post("/register", checkNotAuthenticated, async (req, res) => {
       email: req.body.email,
       password: hashedPassword,
     });
+    // var dbid = users.id;
+    // var dbname = users.name;
+    // var dbemail = users.email;
+    // var dbpassword = users.password;
     res.redirect("/login");
   } catch {
     res.redirect("/register");
@@ -89,5 +96,50 @@ function checkNotAuthenticated(req, res, next) {
   }
   next();
 }
+
+//----------------------------------------------------------------CONNECT TO MONGODB
+
+// import { MongoClient } from "mongodb";
+const MongoClient = require("mongodb").MongoClient;
+
+// Replace the uri string with your MongoDB deployment's connection string.
+const uri =
+  "mongodb+srv://example430:example430@cluster1.mox83lz.mongodb.net/?retryWrites=true&w=majority";
+
+const client = new MongoClient(uri);
+
+// app.get("/register", (req, res) => {
+  async function run() {
+    try {
+      const database = client.db("insertDB");
+      const account = database.collection("account");
+      // create a document to insert
+      // app.get("/register",(req,res) => {
+      //   var name = req.body.name;
+      //   var email = req.body.email;
+      //   var password = req.body.passport;
+      // })
+      const doc = {
+        id:"default",
+        name:"default",
+        email:"default",
+        password:"default",
+        title: "Record of a Shriveled Datum",
+        content: "No bytes, no problem. Just insert a document, in MongoDB",
+      };
+      doc.id = users.id;
+      doc.name = users.name;
+      doc.email = users.email;
+      doc.password = users.password;
+      console.log(users)
+      const result = await account.insertOne(doc);
+
+      console.log(`A document was inserted with the _id: ${result.insertedId}`);
+    } finally {
+      await client.close();
+    }
+  }
+  run().catch(console.dir);
+// });
 
 app.listen(3000);
